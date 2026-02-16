@@ -3,7 +3,7 @@
 
 Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck
 
-[Get started →](https://emusks.js.org)
+[Get started →](https://emusks.tiago.zip)
   
 ---
 
@@ -41,11 +41,11 @@ const results = await client.search.tweets("javascript");
 const home = await client.timelines.home();
 ```
 
-[Read the docs →](https://emusks.js.org)
+[Read the docs →](https://emusks.tiago.zip)
 
 ---
 
-made by [tiago](https://tiago.zip) • [credits](https://emusks.js.org/more/credits)
+made by [tiago](https://tiago.zip) • [credits](https://emusks.tiago.zip/more/credits)
 
 not affiliated with X Corp.    
 released under the aGPL-v3 License.

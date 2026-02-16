@@ -3,4 +3,4 @@
 
 Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck
 
-[Learn more →](https://emusks.js.org)
+[Learn more →](https://emusks.tiago.zip)
