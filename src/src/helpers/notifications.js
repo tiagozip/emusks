@@ -1,6 +1,7 @@
 export async function timeline(opts = {}) {
   return await this.graphql("NotificationsTimeline", {
     variables: {
+      timeline_type: opts.timeline_type || "All",
       count: opts.count || 20,
       cursor: opts.cursor,
       includePromotedContent: false,
