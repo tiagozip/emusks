@@ -75,7 +75,7 @@ export default class Emusks {
     if (typeof p.client === "string") p.client = clients[p.client];
     if (!p.client) throw new Error("invalid client!");
     if (p.proxy) this.proxy = p.proxy;
-    
+
     if (!p.client.bearer) {
       throw new Error("client is missing bearer token!");
     }
@@ -83,7 +83,7 @@ export default class Emusks {
       p.client.userAgent =
         p.client.userAgent ||
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36";
-      
+
       p.client.fingerprints = p.client.fingerprints || {
         ja3: "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,35-5-27-16-0-10-13-23-45-65037-17613-18-65281-51-43-11,4588-29-23-24,0",
         ja4r: "t13d1516h2_002f,0035,009c,009d,1301,1302,1303,c013,c014,c02b,c02c,c02f,c030,cca8,cca9_0005,000a,000b,000d,0012,0017,001b,0023,002b,002d,0033,44cd,fe0d,ff01_0403,0804,0401,0503,0805,0501,0806,0601",
