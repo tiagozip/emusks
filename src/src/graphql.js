@@ -82,8 +82,7 @@ export default async function graphql(queryName, { variables, fieldToggles, body
       },
       method,
     )
-  ).text();
-  console.log(res);
+  ).json();
 
   if (res?.errors?.[0]) {
     throw new Error(res.errors.map((err) => err.message).join(", "));
