@@ -1,19 +1,6 @@
 import parseTweet from "./tweet.js";
 import parseUser from "./user.js";
 
-/**
- * Recursively find the `instructions` array from any Twitter timeline response.
- *
- * Known response shapes:
- *   data.home.home_timeline_urt.instructions
- *   data.user.result.timeline_v2.timeline.instructions
- *   data.search_by_raw_query.search_timeline.timeline.instructions
- *   data.bookmark_timeline_v2.timeline.instructions
- *   data.bookmark_search_timeline.timeline.instructions
- *   data.list.tweets_timeline.timeline.instructions
- *   data.timeline_by_id.timeline.instructions
- *   ... and many more
- */
 function findInstructions(obj) {
   if (!obj || typeof obj !== "object") return null;
 
@@ -32,11 +19,7 @@ function findInstructions(obj) {
   return null;
 }
 
-/**
- * Extract tweet results from a single timeline entry.
- */
 function extractTweetFromEntry(entry) {
-  // Standard tweet entry
   const tweetResult =
     entry?.content?.itemContent?.tweet_results?.result ||
     entry?.item?.itemContent?.tweet_results?.result;
@@ -46,9 +29,6 @@ function extractTweetFromEntry(entry) {
   return null;
 }
 
-/**
- * Extract user results from a single timeline entry.
- */
 function extractUserFromEntry(entry) {
   const userResult =
     entry?.content?.itemContent?.user_results?.result ||
@@ -59,12 +39,6 @@ function extractUserFromEntry(entry) {
   return null;
 }
 
-/**
- * Parse a raw Twitter timeline/search/bookmark GraphQL response into
- * `{ tweets, users, nextCursor, previousCursor }`.
- *
- * Works universally across all timeline-shaped endpoints.
- */
 export default function parseTimeline(raw) {
   const instructions = findInstructions(raw?.data || raw);
 
@@ -78,17 +52,10 @@ export default function parseTimeline(raw) {
   let previousCursor = null;
 
   for (const instruction of instructions) {
-    const entries =
-      instruction.entries || // TimelineAddEntries
-        instruction.entry // TimelineReplaceEntry (single)
-        ? [instruction.entry]
-        : null;
-
     if (instruction.type === "TimelineAddEntries" || instruction.entries) {
       for (const entry of instruction.entries || []) {
         processEntry(entry, tweets, users);
 
-        // Extract cursors
         if (entry.entryId?.startsWith("cursor-bottom") || entry.entryId?.includes("cursor-bottom")) {
           nextCursor =
             entry.content?.value || entry.content?.itemContent?.value || null;
@@ -115,21 +82,18 @@ export default function parseTimeline(raw) {
 }
 
 function processEntry(entry, tweets, users) {
-  // Direct tweet entry (tweet-*)
   const tweet = extractTweetFromEntry(entry);
   if (tweet) {
     tweets.push(tweet);
     return;
   }
 
-  // Direct user entry (user-*)
   const user = extractUserFromEntry(entry);
   if (user) {
     users.push(user);
     return;
   }
 
-  // Module entries (conversationthread-*, profile-grid-*, etc.)
   if (entry.content?.items) {
     for (const item of entry.content.items) {
       const t = extractTweetFromEntry(item);

@@ -127,20 +127,9 @@ async function makeUploadRequest(
 }
 
 export default (client) => ({
-  /**
-   * Upload media (image, GIF, or video) to Twitter.
-   *
-   * @param {string|Buffer|Uint8Array|ArrayBuffer|Blob} source - file path, Buffer, Uint8Array, ArrayBuffer, or Blob
-   * @param {object} [opts]
-   * @param {string} [opts.alt_text]   - alt text for accessibility
-   * @param {string} [opts.mediaType]  - explicit MIME type (e.g. "image/png"); auto-detected when omitted
-   * @param {"tweet"|"dm"} [opts.type] - upload context; defaults to "tweet"
-   * @returns {{ media_id: string }}
-   */
   async create(source, opts = {}) {
     if (!client.auth) throw new Error("you must be logged in to upload media");
 
-    // ── normalise input to Buffer ──────────────────────────────────────
     let buf;
     let mediaType = opts.mediaType;
 
@@ -174,7 +163,6 @@ export default (client) => ({
     const category = getMediaCategory(mediaType, uploadType);
     checkMediaSize(category, totalBytes);
 
-    // ── INIT ───────────────────────────────────────────────────────────
     const initRes = await makeUploadRequest(client, "post", {
       command: "INIT",
       media_type: mediaType,
@@ -188,7 +176,6 @@ export default (client) => ({
     }
     const mediaId = initData.media_id_string;
 
-    // ── APPEND (chunked, base64) ───────────────────────────────────────
     let segmentIndex = 0;
     for (let offset = 0; offset < totalBytes; offset += CHUNK_SIZE) {
       const chunk = buf.slice(
@@ -211,7 +198,6 @@ export default (client) => ({
       segmentIndex++;
     }
 
-    // ── FINALIZE ───────────────────────────────────────────────────────
     const finalizeRes = await makeUploadRequest(client, "post", {
       command: "FINALIZE",
       media_id: mediaId,
@@ -225,7 +211,6 @@ export default (client) => ({
       );
     }
 
-    // ── poll for async processing (videos / gifs) ──────────────────────
     let processingInfo = finalizeData?.processing_info;
     while (processingInfo) {
       if (processingInfo.error) {
@@ -251,7 +236,6 @@ export default (client) => ({
       processingInfo = statusData?.processing_info;
     }
 
-    // ── alt text ───────────────────────────────────────────────────────
     if (opts.alt_text) {
       await client.v1_1("media/metadata/create", {
         body: JSON.stringify({

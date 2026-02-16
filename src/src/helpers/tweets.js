@@ -37,7 +37,6 @@ async function createPollCard(client, poll) {
   };
 
   if (hasImages) {
-    // media poll — uses a different card type and includes image media IDs
     cardObj["twitter:card"] = `poll_choice_images`;
     for (let i = 0; i < poll.choices.length; i++) {
       cardObj[`twitter:string:choice${i + 1}_label`] = labels[i];
@@ -45,7 +44,6 @@ async function createPollCard(client, poll) {
         `mis://${poll.choices[i].image}`;
     }
   } else {
-    // text-only poll
     cardObj["twitter:card"] = `poll${poll.choices.length}choice_text_only`;
     for (let i = 0; i < labels.length; i++) {
       cardObj[`twitter:string:choice${i + 1}_label`] = labels[i];
