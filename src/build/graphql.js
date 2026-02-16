@@ -8,9 +8,12 @@ const transformed = Object.fromEntries(
     const features = data.features
       ? Object.fromEntries(Object.keys(data.features).map((k) => [k, true]))
       : undefined;
-    const queryId = data.url.match(/\/graphql\/([^\/]+)\//)?.[1];
+    const queryId = data.url.match(/\/graphql\/([^/]+)\//)?.[1];
     return [name, [data.method, data.url, features, queryId]];
   }),
 );
 
-await Bun.write(`./src/static/graphql.js`, `export default ${JSON.stringify(transformed)};`);
+await Bun.write(
+  `./src/static/graphql.js`,
+  `export default ${JSON.stringify(transformed)};`,
+);

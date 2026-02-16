@@ -55,6 +55,21 @@ await client.login({
 
 Rotating proxies are not supported by default and I don't recommend using them. While you could constantly rotate the `proxy` sent to the client yourself, Twitter will most likely notice it and get suspicious of a single session being used from many IPs.
 
+## Handling errors
+
+emusks throws errors sent from the Twitter GraphQL API by default. You can catch these errors using a try-catch block, and for long-running apps we recommnd setting a system for you to be notified in case your account gets locked or rate-limited:
+
+```
+83 |       method,
+84 |     )
+85 |   ).json();
+86 |
+87 |   if (res?.errors?.[0]) {
+88 |     throw new Error(res.errors.map((err) => err.message).join(", "));
+                   ^
+error: Authorization: Denied by access control: Missing TwitterUserNotSuspended; To protect our users from spam and other malicious activity, this account is temporarily locked. Please log in to https://twitter.com to unlock your account.
+```
+
 ## Next steps
 
 You're all set! Explore the helper namespaces to start building:
