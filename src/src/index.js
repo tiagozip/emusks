@@ -1,0 +1,161 @@
+import { ClientTransaction, handleXMigration } from "x-client-transaction-id";
+import parseUser from "./parsers/user.js";
+import getCycleTLS from "./cycletls.js";
+import clients from "./clients.js";
+import graphql from "./graphql.js";
+import v1_1 from "./v1.1.js";
+import v2 from "./v2.js";
+import flowLogin from "./flow.js";
+import initHelpers from "./helpers/index.js";
+
+export default class Emusks {
+  auth = null;
+  elevatedCookies = null;
+  graphql = graphql;
+  v1_1 = v1_1;
+  v2 = v2;
+
+  async elevate(password) {
+    if (!this.auth) throw new Error("must be logged in before calling elevate");
+
+    const res = await this.v1_1("account/verify_password", {
+      body: `password=${encodeURIComponent(password)}`,
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    const setCookies = res.headers["Set-Cookie"] || [];
+
+    const json = await res.json();
+    if (json.status !== "ok") {
+      throw new Error("invalid password");
+    }
+
+    const cookieParts = [];
+    for (const setCookie of setCookies) {
+      const cookiePair = setCookie.split(";")[0];
+      if (cookiePair) {
+        cookieParts.push(cookiePair);
+      }
+    }
+
+    this.elevatedCookies = cookieParts.join("; ");
+
+    return json;
+  }
+
+  async login(p) {
+    if (typeof p === "string") {
+      if (p.length > 50 || p.length < 20) {
+        throw new Error("invalid auth token length!");
+      }
+      p = { auth_token: p };
+    }
+
+    if (p.type === "password") {
+      if (!p.username) throw new Error("username is required for password login");
+      if (!p.password) throw new Error("password is required for password login");
+
+      const flowResult = await flowLogin({
+        username: p.username,
+        password: p.password,
+        email: p.email,
+        phone: p.phone,
+        onRequest: p.onRequest,
+        proxy: p.proxy,
+      });
+
+      p = {
+        auth_token: flowResult.authToken,
+        client: p.client,
+        proxy: p.proxy,
+      };
+    }
+
+    if (!p.client) p.client = "web";
+    if (!p.auth_token) throw new Error("auth_token is required!");
+    if (typeof p.client === "string") p.client = clients[p.client];
+    if (!p.client) throw new Error("invalid client!");
+    if (p.proxy) this.proxy = p.proxy;
+
+    p.client.headers = {
+      "accept-language": "en-US,en;q=0.9",
+      priority: "u=1, i",
+      "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"macOS"',
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-site",
+      "sec-gpc": "1",
+    };
+
+    const cycleTLS = await getCycleTLS();
+    const res = await cycleTLS("https://x.com/", {
+      headers: {
+        accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        cookie: `auth_token=${p.auth_token};`,
+        ...p.client.headers,
+      },
+      userAgent: p.client.fingerprints.userAgent,
+      ja3: p.client.fingerprints.ja3,
+      ja4r: p.client.fingerprints.ja4r,
+      proxy: p.proxy || undefined,
+      referrer: "https://x.com/",
+    });
+
+    const setCookies = res.headers["Set-Cookie"] || [];
+    const csrfToken = setCookies
+      .find((c) => c?.startsWith?.("ct0="))
+      ?.split?.(";")?.[0]
+      ?.split?.("=")?.[1];
+
+    if (!csrfToken) {
+      throw new Error("[emusks] failed to log in");
+    }
+
+    this.auth = p;
+    this.auth.csrfToken = csrfToken;
+
+    const cookieParts = [`auth_token=${p.auth_token}`];
+    for (const setCookie of setCookies) {
+      const cookiePair = setCookie.split(";")[0];
+      if (cookiePair && !cookiePair.startsWith("auth_token=")) {
+        cookieParts.push(cookiePair);
+      }
+    }
+    this.auth.client.headers.cookie = cookieParts.join("; ");
+
+    const responseText = await res.text();
+    const initialStateMatch = responseText.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s);
+
+    if (!initialStateMatch) {
+      console.warn("[emusks] failed to extract initial state from response");
+      return;
+    }
+
+    const initialState = JSON.parse(initialStateMatch[1]);
+    const usersEntities = initialState?.entities?.users?.entities;
+    const initialStateUser = usersEntities && Object.values(usersEntities)[0];
+
+    if (!initialStateUser) {
+      console.warn("[emusks] failed to extract user from initial state");
+      return;
+    }
+
+    this.user = parseUser(initialStateUser);
+    this.settings = initialState?.settings?.remote?.settings;
+
+    const document = await handleXMigration();
+    const transaction = new ClientTransaction(document);
+    await transaction.initialize();
+    this.auth.generateTransactionId = transaction.generateTransactionId.bind(transaction);
+
+    const helpers = initHelpers(this);
+    Object.assign(this, helpers);
+
+    return this.user;
+  }
+}

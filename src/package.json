@@ -1,0 +1,19 @@
+{
+  "name": "emusks",
+  "version": "2.0.0",
+  "description": "Reverse-engineered Twitter API client. Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck",
+  "keywords": ["twitter", "twitter-api", "x", "x-api", "reverse-engineering", "client"],
+  "homepage": "https://github.com/tiagozip/cap",
+  "bugs": {
+    "url": "https://github.com/tiagozip/cap/issues"
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tiagozip/cap.git"
+  },
+  "dependencies": {
+    "cycletls": "^2.0.5",
+    "x-client-transaction-id": "^0.1.9"
+  }
+}

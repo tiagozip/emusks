@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "vitepress-plugin-llms": "^1.11.0"
+  },
+  "devDependencies": {
+    "vitepress": "^2.0.0-alpha.16",
+    "vue": "^3.5.28"
+  },
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  }
+}
