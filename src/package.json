@@ -1,8 +1,15 @@
 {
   "name": "emusks",
-  "version": "2.0.2",
+  "version": "2.0.4",
   "description": "Reverse-engineered Twitter API client. Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck",
-  "keywords": ["twitter", "twitter-api", "x", "x-api", "reverse-engineering", "client"],
+  "keywords": [
+    "client",
+    "reverse-engineering",
+    "twitter",
+    "twitter-api",
+    "x",
+    "x-api"
+  ],
   "homepage": "https://github.com/tiagozip/emusks",
   "bugs": {
     "url": "https://github.com/tiagozip/emusks/issues"
@@ -11,6 +18,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/tiagozip/emusks.git"
+  },
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
   },
   "dependencies": {
     "cycletls": "^2.0.5",
