@@ -1,55 +1,53 @@
-export default (client) => ({
-  async get(spaceId) {
-    return await client.graphql("AudioSpaceById", {
-      variables: {
-        id: spaceId,
-        isMetatagsQuery: false,
-        withReplays: true,
-        withListeners: true,
-      },
-    });
-  },
+export async function get(spaceId) {
+  return await this.graphql("AudioSpaceById", {
+    variables: {
+      id: spaceId,
+      isMetatagsQuery: false,
+      withReplays: true,
+      withListeners: true,
+    },
+  });
+}
 
-  async search(query, opts = {}) {
-    return await client.graphql("AudioSpaceSearch", {
-      variables: {
-        query,
-        count: opts.count || 20,
-        cursor: opts.cursor,
-        ...opts.variables,
-      },
-    });
-  },
+export async function search(query, opts = {}) {
+  return await this.graphql("AudioSpaceSearch", {
+    variables: {
+      query,
+      count: opts.count || 20,
+      cursor: opts.cursor,
+      ...opts.variables,
+    },
+  });
+}
 
-  async browseTopics(opts = {}) {
-    return await client.graphql("BrowseSpaceTopics", {
-      variables: {
-        ...opts.variables,
-      },
-    });
-  },
+export async function browseTopics(opts = {}) {
+  return await this.graphql("BrowseSpaceTopics", {
+    variables: {
+      ...opts.variables,
+    },
+  });
+}
 
-  async subscribe(spaceId) {
-    return await client.graphql("SubscribeToScheduledSpace", {
-      body: { variables: { space_id: spaceId } },
-    });
-  },
+export async function subscribe(spaceId) {
+  return await this.graphql("SubscribeToScheduledSpace", {
+    body: { variables: { space_id: spaceId } },
+  });
+}
 
-  async unsubscribe(spaceId) {
-    return await client.graphql("UnsubscribeFromScheduledSpace", {
-      body: { variables: { space_id: spaceId } },
-    });
-  },
+export async function unsubscribe(spaceId) {
+  return await this.graphql("UnsubscribeFromScheduledSpace", {
+    body: { variables: { space_id: spaceId } },
+  });
+}
 
-  async addSharing(spaceId) {
-    return await client.graphql("AudioSpaceAddSharing", {
-      body: { variables: { space_id: spaceId } },
-    });
-  },
+export async function addSharing(spaceId) {
+  return await this.graphql("AudioSpaceAddSharing", {
+    body: { variables: { space_id: spaceId } },
+  });
+}
 
-  async deleteSharing(spaceId) {
-    return await client.graphql("AudioSpaceDeleteSharing", {
-      body: { variables: { space_id: spaceId } },
-    });
-  },
-});
+export async function deleteSharing(spaceId) {
+  return await this.graphql("AudioSpaceDeleteSharing", {
+    body: { variables: { space_id: spaceId } },
+  });
+}

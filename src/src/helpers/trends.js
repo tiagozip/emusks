@@ -1,86 +1,84 @@
-export default (client) => ({
-  async available() {
-    const res = await client.v1_1("trends/available", {});
-    return await res.json();
-  },
+export async function available() {
+  const res = await this.v1_1("trends/available", {});
+  return await res.json();
+}
 
-  async history(opts = {}) {
-    return await client.graphql("TrendHistory", {
-      variables: {
-        count: opts.count || 20,
-        cursor: opts.cursor,
-        ...opts.variables,
-      },
-    });
-  },
+export async function history(opts = {}) {
+  return await this.graphql("TrendHistory", {
+    variables: {
+      count: opts.count || 20,
+      cursor: opts.cursor,
+      ...opts.variables,
+    },
+  });
+}
 
-  async relevantUsers(trendName, opts = {}) {
-    return await client.graphql("TrendRelevantUsers", {
-      variables: {
-        trend_name: trendName,
-        ...opts.variables,
-      },
-    });
-  },
+export async function relevantUsers(trendName, opts = {}) {
+  return await this.graphql("TrendRelevantUsers", {
+    variables: {
+      trend_name: trendName,
+      ...opts.variables,
+    },
+  });
+}
 
-  async explore(opts = {}) {
-    return await client.graphql("ExplorePage", {
-      variables: {
-        count: opts.count || 20,
-        cursor: opts.cursor,
-        ...opts.variables,
-      },
-      fieldToggles: {
-        withArticlePlainText: false,
-        withArticleRichContentState: false,
-        withAuxiliaryUserLabels: false,
-      },
-    });
-  },
+export async function explore(opts = {}) {
+  return await this.graphql("ExplorePage", {
+    variables: {
+      count: opts.count || 20,
+      cursor: opts.cursor,
+      ...opts.variables,
+    },
+    fieldToggles: {
+      withArticlePlainText: false,
+      withArticleRichContentState: false,
+      withAuxiliaryUserLabels: false,
+    },
+  });
+}
 
-  async exploreSidebar(opts = {}) {
-    return await client.graphql("ExploreSidebar", {
-      variables: {
-        count: opts.count || 20,
-        cursor: opts.cursor,
-        ...opts.variables,
-      },
-    });
-  },
+export async function exploreSidebar(opts = {}) {
+  return await this.graphql("ExploreSidebar", {
+    variables: {
+      count: opts.count || 20,
+      cursor: opts.cursor,
+      ...opts.variables,
+    },
+  });
+}
 
-  async report(trendId) {
-    return await client.graphql("ReportTrend", {
-      body: { variables: { trend_id: trendId } },
-    });
-  },
+export async function report(trendId) {
+  return await this.graphql("ReportTrend", {
+    body: { variables: { trend_id: trendId } },
+  });
+}
 
-  async save(trendId) {
-    return await client.graphql("SaveTrend", {
-      body: { variables: { trend_id: trendId } },
-    });
-  },
+export async function save(trendId) {
+  return await this.graphql("SaveTrend", {
+    body: { variables: { trend_id: trendId } },
+  });
+}
 
-  async action(trendId, action) {
-    return await client.graphql("ActionTrend", {
-      body: { variables: { trend_id: trendId, action } },
-    });
-  },
+export async function action(trendId, action) {
+  return await this.graphql("ActionTrend", {
+    body: { variables: { trend_id: trendId, action } },
+  });
+}
 
-  async getById(trendId) {
-    return await client.graphql("AiTrendByRestId", {
-      variables: { trendId },
-    });
-  },
+export async function getById(trendId) {
+  return await this.graphql("AiTrendByRestId", {
+    variables: { trendId },
+  });
+}
 
-  async exploreSettings() {
-    const res = await client.v2("guide/get_explore_settings", {});
-    return await res.json();
-  },
+export async function exploreSettings() {
+  const res = await this.v2("guide/get_explore_settings", {});
+  return await res.json();
+}
 
-  async setExploreSettings(params = {}) {
-    const res = await client.v2("guide/set_explore_settings", {
-      body: JSON.stringify(params),
-    });
-    return await res.json();
-  },
-});
+export async function setExploreSettings(params = {}) {
+  const res = await this.v2("guide/set_explore_settings", {
+    body: JSON.stringify(params),
+  });
+  return await res.json();
+}

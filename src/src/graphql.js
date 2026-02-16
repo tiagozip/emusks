@@ -7,18 +7,35 @@ export default async function graphql(queryName, { variables, fieldToggles, body
     throw new Error(`graphql query ${queryName} not found`);
   }
 
-  const [method, baseUrl] = entry;
+  const [method, baseUrl, features, queryId] = entry;
+  const isPost = method.toLowerCase() === "post";
 
   let finalUrl = baseUrl;
+  let requestBody;
 
-  if (variables && Object.keys(variables).length) {
-    const separator = baseUrl.includes("?") ? "&" : "?";
-    finalUrl = `${baseUrl}${separator}variables=${encodeURIComponent(JSON.stringify(variables))}`;
-  }
-
-  if (fieldToggles && Object.keys(fieldToggles).length) {
-    const separator = finalUrl.includes("?") ? "&" : "?";
-    finalUrl = `${finalUrl}${separator}fieldToggles=${encodeURIComponent(JSON.stringify(fieldToggles))}`;
+  if (isPost) {
+    requestBody = {
+      ...body,
+      variables: { ...variables, ...body?.variables },
+      queryId,
+    };
+    if (features) requestBody.features = features;
+    if (fieldToggles && Object.keys(fieldToggles).length) {
+      requestBody.fieldToggles = fieldToggles;
+    }
+  } else {
+    if (variables && Object.keys(variables).length) {
+      const separator = finalUrl.includes("?") ? "&" : "?";
+      finalUrl = `${finalUrl}${separator}variables=${encodeURIComponent(JSON.stringify(variables))}`;
+    }
+    if (features) {
+      const separator = finalUrl.includes("?") ? "&" : "?";
+      finalUrl = `${finalUrl}${separator}features=${encodeURIComponent(JSON.stringify(features))}`;
+    }
+    if (fieldToggles && Object.keys(fieldToggles).length) {
+      const separator = finalUrl.includes("?") ? "&" : "?";
+      finalUrl = `${finalUrl}${separator}fieldToggles=${encodeURIComponent(JSON.stringify(fieldToggles))}`;
+    }
   }
 
   const url = new URL(finalUrl);
@@ -51,8 +68,7 @@ export default async function graphql(queryName, { variables, fieldToggles, body
   };
 
   const cycleTLS = await getCycleTLS();
-
-  return await (
+  const res = await (
     await cycleTLS(
       finalUrl,
       {
@@ -60,11 +76,17 @@ export default async function graphql(queryName, { variables, fieldToggles, body
         userAgent: this.auth.client.fingerprints.userAgent,
         ja3: this.auth.client.fingerprints.ja3,
         ja4r: this.auth.client.fingerprints.ja4r,
-        body: typeof body === "object" ? JSON.stringify(body) : undefined,
+        body: isPost ? JSON.stringify(requestBody) : undefined,
         proxy: this.proxy || undefined,
         referrer: "https://x.com/",
       },
       method,
     )
   ).json();
+  
+  if (res?.errors?.[0]) {
+    throw new Error(res.errors.map((err) => err.message).join(", "));
+  }
+
+  return res;
 }

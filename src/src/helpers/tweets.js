@@ -1,7 +1,7 @@
 import getCycleTLS from "../cycletls.js";
 import parseTweet from "../parsers/tweet.js";
 
-async function createPollCard(client, poll) {
+async function createPollCard(instance, poll) {
   if (!poll.choices || poll.choices.length < 2)
     throw new Error("a poll must have at least 2 choices");
   if (poll.choices.length > 4)
@@ -37,7 +37,7 @@ async function createPollCard(client, poll) {
   };
 
   if (hasImages) {
-    cardObj["twitter:card"] = `poll_choice_images`;
+    cardObj["twitter:card"] = "poll_choice_images";
     for (let i = 0; i < poll.choices.length; i++) {
       cardObj[`twitter:string:choice${i + 1}_label`] = labels[i];
       cardObj[`twitter:image:choice${i + 1}_image:src:id`] =
@@ -58,31 +58,31 @@ async function createPollCard(client, poll) {
       headers: {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
-        authorization: `Bearer ${client.auth.client.bearer}`,
+        authorization: `Bearer ${instance.auth.client.bearer}`,
         "content-type": "application/x-www-form-urlencoded",
-        "x-csrf-token": client.auth.csrfToken,
+        "x-csrf-token": instance.auth.csrfToken,
         "x-twitter-active-user": "yes",
         "x-twitter-auth-type": "OAuth2Session",
         "x-twitter-client-language": "en",
         priority: "u=1, i",
-        "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144"',
+        "sec-ch-ua": '\u0022Not(A:Brand\u0022;v=\u00228\u0022, \u0022Chromium\u0022;v=\u0022144\u0022',
         "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"macOS"',
+        "sec-ch-ua-platform": '\u0022macOS\u0022',
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
         "sec-gpc": "1",
         cookie:
-          client.auth.client.headers.cookie +
-          (client.elevatedCookies ? `; ${client.elevatedCookies}` : ""),
+          instance.auth.client.headers.cookie +
+          (instance.elevatedCookies ? `; ${instance.elevatedCookies}` : ""),
       },
       body: `card_data=${encodeURIComponent(cardData)}`,
       userAgent:
-        client.auth.client.fingerprints?.userAgent ||
-        client.auth.client.fingerprints?.["user-agent"],
-      ja3: client.auth.client.fingerprints?.ja3,
-      ja4r: client.auth.client.fingerprints?.ja4r,
-      proxy: client.proxy || undefined,
+        instance.auth.client.fingerprints?.userAgent ||
+        instance.auth.client.fingerprints?.["user-agent"],
+      ja3: instance.auth.client.fingerprints?.ja3,
+      ja4r: instance.auth.client.fingerprints?.ja4r,
+      proxy: instance.proxy || undefined,
       referrer: "https://x.com/",
     },
     "post",
@@ -95,309 +95,307 @@ async function createPollCard(client, poll) {
   return data.card_uri;
 }
 
-export default (client) => ({
-  async create(text, opts = {}) {
-    let cardUri = opts.cardUri;
+export async function create(text, opts = {}) {
+  let cardUri = opts.cardUri;
 
-    if (opts.poll) {
-      if (cardUri)
-        throw new Error("a tweet can't have both a poll and a cardUri");
-      cardUri = await createPollCard(client, opts.poll);
-    }
+  if (opts.poll) {
+    if (cardUri)
+      throw new Error("a tweet can\u0027t have both a poll and a cardUri");
+    cardUri = await createPollCard(this, opts.poll);
+  }
 
-    const res = await client.graphql("CreateTweet", {
-      body: {
-        variables: {
-          tweet_text: text,
-          dark_request: false,
-          card_uri: cardUri || undefined,
-          media: {
-            media_entities:
-              opts.mediaIds?.map((id) => ({
-                media_id: id,
-                tagged_users: [],
-              })) || [],
-            possibly_sensitive: opts.sensitive || false,
-          },
-          semantic_annotation_ids: [],
-          ...(opts.replyTo
-            ? {
-              reply: {
-                in_reply_to_tweet_id: opts.replyTo,
-                exclude_reply_user_ids: [],
-              },
-            }
-            : {}),
-          ...(opts.quoteTweetId
-            ? { attachment_url: `https://x.com/i/status/${opts.quoteTweetId}` }
-            : {}),
-          ...(opts.conversationControl
-            ? { conversation_control: { mode: opts.conversationControl } }
-            : {}),
-          ...opts.variables,
+  const res = await this.graphql("CreateTweet", {
+    body: {
+      variables: {
+        tweet_text: text,
+        dark_request: false,
+        card_uri: cardUri || undefined,
+        media: {
+          media_entities:
+            opts.mediaIds?.map((id) => ({
+              media_id: id,
+              tagged_users: [],
+            })) || [],
+          possibly_sensitive: opts.sensitive || false,
         },
-      },
-    });
-    const tweet = res?.data?.create_tweet?.tweet_results?.result;
-    return tweet ? parseTweet(tweet) : res;
-  },
-
-  async createNote(text, opts = {}) {
-    const res = await client.graphql("CreateNoteTweet", {
-      body: {
-        variables: {
-          tweet_text: text,
-          dark_request: false,
-          media: {
-            media_entities:
-              opts.mediaIds?.map((id) => ({
-                media_id: id,
-                tagged_users: [],
-              })) || [],
-            possibly_sensitive: opts.sensitive || false,
-          },
-          semantic_annotation_ids: [],
-          richtext_options: { richtext_tags: opts.richtext_tags || [] },
-          ...(opts.replyTo
-            ? {
-              reply: {
-                in_reply_to_tweet_id: opts.replyTo,
-                exclude_reply_user_ids: [],
-              },
-            }
-            : {}),
-          ...opts.variables,
-        },
-      },
-    });
-    const tweet = res?.data?.notetweet_create?.tweet_results?.result;
-    return tweet ? parseTweet(tweet) : res;
-  },
-
-  async delete(tweetId) {
-    return await client.graphql("DeleteTweet", {
-      body: { variables: { tweet_id: tweetId, dark_request: false } },
-    });
-  },
-
-  async like(tweetId) {
-    return await client.graphql("FavoriteTweet", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
-
-  async unlike(tweetId) {
-    return await client.graphql("UnfavoriteTweet", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
-
-  async retweet(tweetId) {
-    return await client.graphql("CreateRetweet", {
-      body: { variables: { tweet_id: tweetId, dark_request: false } },
-    });
-  },
-
-  async unretweet(tweetId) {
-    return await client.graphql("DeleteRetweet", {
-      body: { variables: { source_tweet_id: tweetId, dark_request: false } },
-    });
-  },
-
-  async pin(tweetId) {
-    return await client.graphql("PinTweet", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
-
-  async unpin(tweetId) {
-    return await client.graphql("UnpinTweet", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
-
-  async get(tweetId) {
-    const res = await client.graphql("TweetResultByRestId", {
-      variables: {
-        tweetId,
-        withCommunity: false,
-        includePromotedContent: false,
-        withVoice: false,
-      },
-      fieldToggles: {
-        withArticlePlainText: false,
-        withArticleRichContentState: false,
-        withAuxiliaryUserLabels: false,
-      },
-    });
-    const tweet = res?.data?.tweetResult?.result;
-    return tweet ? parseTweet(tweet) : res;
-  },
-
-  async getMany(tweetIds) {
-    const res = await client.graphql("TweetResultsByRestIds", {
-      variables: {
-        tweetIds,
-        withCommunity: false,
-        includePromotedContent: false,
-        withVoice: false,
-      },
-      fieldToggles: {
-        withArticlePlainText: false,
-        withArticleRichContentState: false,
-        withAuxiliaryUserLabels: false,
-      },
-    });
-    const results = res?.data?.tweetResult || [];
-    return Array.isArray(results)
-      ? results.map((r) => (r?.result ? parseTweet(r.result) : r))
-      : res;
-  },
-
-  async detail(tweetId, opts = {}) {
-    return await client.graphql("TweetDetail", {
-      variables: {
-        focalTweetId: tweetId,
-        with_rux_injections: false,
-        rankingMode: "Relevance",
-        includePromotedContent: true,
-        withCommunity: true,
-        withQuickPromoteEligibilityTweetFields: true,
-        withBirdwatchNotes: true,
-        withVoice: true,
+        semantic_annotation_ids: [],
+        ...(opts.replyTo
+          ? {
+            reply: {
+              in_reply_to_tweet_id: opts.replyTo,
+              exclude_reply_user_ids: [],
+            },
+          }
+          : {}),
+        ...(opts.quoteTweetId
+          ? { attachment_url: `https://x.com/i/status/${opts.quoteTweetId}` }
+          : {}),
+        ...(opts.conversationControl
+          ? { conversation_control: { mode: opts.conversationControl } }
+          : {}),
         ...opts.variables,
       },
-      fieldToggles: {
-        withArticlePlainText: false,
-        withArticleRichContentState: false,
-        withAuxiliaryUserLabels: false,
-      },
-    });
-  },
+    },
+  });
+  const tweet = res?.data?.create_tweet?.tweet_results?.result;
+  return tweet ? parseTweet(tweet) : res;
+}
 
-  async editHistory(tweetId) {
-    return await client.graphql("TweetEditHistory", {
-      variables: { tweetId, withQuickPromoteEligibilityTweetFields: true },
-    });
-  },
-
-  async retweeters(tweetId, opts = {}) {
-    return await client.graphql("Retweeters", {
+export async function createNote(text, opts = {}) {
+  const res = await this.graphql("CreateNoteTweet", {
+    body: {
       variables: {
-        tweetId,
-        count: opts.count || 20,
-        cursor: opts.cursor,
-        includePromotedContent: false,
-      },
-    });
-  },
-
-  async highlight(tweetId) {
-    return await client.graphql("CreateHighlight", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
-
-  async unhighlight(tweetId) {
-    return await client.graphql("DeleteHighlight", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
-
-  async schedule(text, scheduledAt, opts = {}) {
-    return await client.graphql("CreateScheduledTweet", {
-      body: {
-        variables: {
-          post_tweet_request: {
-            status: text,
-            ...(opts.mediaIds ? { media_ids: opts.mediaIds } : {}),
-            ...(opts.replyTo ? { in_reply_to_status_id: opts.replyTo } : {}),
-            auto_populate_reply_metadata: true,
-          },
-          execute_at: Math.floor(new Date(scheduledAt).getTime() / 1000),
+        tweet_text: text,
+        dark_request: false,
+        media: {
+          media_entities:
+            opts.mediaIds?.map((id) => ({
+              media_id: id,
+              tagged_users: [],
+            })) || [],
+          possibly_sensitive: opts.sensitive || false,
         },
+        semantic_annotation_ids: [],
+        richtext_options: { richtext_tags: opts.richtext_tags || [] },
+        ...(opts.replyTo
+          ? {
+            reply: {
+              in_reply_to_tweet_id: opts.replyTo,
+              exclude_reply_user_ids: [],
+            },
+          }
+          : {}),
+        ...opts.variables,
       },
-    });
-  },
+    },
+  });
+  const tweet = res?.data?.notetweet_create?.tweet_results?.result;
+  return tweet ? parseTweet(tweet) : res;
+}
 
-  async deleteScheduled(scheduledTweetId) {
-    return await client.graphql("DeleteScheduledTweet", {
-      body: { variables: { scheduled_tweet_id: scheduledTweetId } },
-    });
-  },
+export async function remove(tweetId) {
+  return await this.graphql("DeleteTweet", {
+    body: { variables: { tweet_id: tweetId, dark_request: false } },
+  });
+}
 
-  async getScheduled() {
-    return await client.graphql("FetchScheduledTweets", {
-      variables: {},
-    });
-  },
+export async function like(tweetId) {
+  return await this.graphql("FavoriteTweet", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
 
-  async moderate(tweetId) {
-    return await client.graphql("ModerateTweet", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
+export async function unlike(tweetId) {
+  return await this.graphql("UnfavoriteTweet", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
 
-  async unmoderate(tweetId) {
-    return await client.graphql("UnmoderateTweet", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
+export async function retweet(tweetId) {
+  return await this.graphql("CreateRetweet", {
+    body: { variables: { tweet_id: tweetId, dark_request: false } },
+  });
+}
 
-  async pinReply(tweetId) {
-    return await client.graphql("PinReply", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
+export async function unretweet(tweetId) {
+  return await this.graphql("DeleteRetweet", {
+    body: { variables: { source_tweet_id: tweetId, dark_request: false } },
+  });
+}
 
-  async unpinReply(tweetId) {
-    return await client.graphql("UnpinReply", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
+export async function pin(tweetId) {
+  return await this.graphql("PinTweet", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
 
-  async setConversationControl(tweetId, mode) {
-    return await client.graphql("ConversationControlChange", {
-      body: { variables: { tweet_id: tweetId, mode } },
-    });
-  },
+export async function unpin(tweetId) {
+  return await this.graphql("UnpinTweet", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
 
-  async removeConversationControl(tweetId) {
-    return await client.graphql("ConversationControlDelete", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
+export async function get(tweetId) {
+  const res = await this.graphql("TweetResultByRestId", {
+    variables: {
+      tweetId,
+      withCommunity: false,
+      includePromotedContent: false,
+      withVoice: false,
+    },
+    fieldToggles: {
+      withArticlePlainText: false,
+      withArticleRichContentState: false,
+      withAuxiliaryUserLabels: false,
+    },
+  });
+  const tweet = res?.data?.tweetResult?.result;
+  return tweet ? parseTweet(tweet) : res;
+}
 
-  async unmention(tweetId) {
-    return await client.graphql("UnmentionUserFromConversation", {
-      body: { variables: { tweet_id: tweetId } },
-    });
-  },
+export async function getMany(tweetIds) {
+  const res = await this.graphql("TweetResultsByRestIds", {
+    variables: {
+      tweetIds,
+      withCommunity: false,
+      includePromotedContent: false,
+      withVoice: false,
+    },
+    fieldToggles: {
+      withArticlePlainText: false,
+      withArticleRichContentState: false,
+      withAuxiliaryUserLabels: false,
+    },
+  });
+  const results = res?.data?.tweetResult || [];
+  return Array.isArray(results)
+    ? results.map((r) => (r?.result ? parseTweet(r.result) : r))
+    : res;
+}
 
-  async createThread(items) {
-    if (!Array.isArray(items) || items.length < 2)
-      throw new Error("a thread must have at least 2 tweets");
+export async function detail(tweetId, opts = {}) {
+  return await this.graphql("TweetDetail", {
+    variables: {
+      focalTweetId: tweetId,
+      with_rux_injections: false,
+      rankingMode: "Relevance",
+      includePromotedContent: true,
+      withCommunity: true,
+      withQuickPromoteEligibilityTweetFields: true,
+      withBirdwatchNotes: true,
+      withVoice: true,
+      ...opts.variables,
+    },
+    fieldToggles: {
+      withArticlePlainText: false,
+      withArticleRichContentState: false,
+      withAuxiliaryUserLabels: false,
+    },
+  });
+}
 
-    const tweets = [];
-    let lastId = null;
+export async function editHistory(tweetId) {
+  return await this.graphql("TweetEditHistory", {
+    variables: { tweetId, withQuickPromoteEligibilityTweetFields: true },
+  });
+}
 
-    for (const item of items) {
-      const opts = typeof item === "string" ? {} : { ...item };
-      const text = typeof item === "string" ? item : item.text;
+export async function retweeters(tweetId, opts = {}) {
+  return await this.graphql("Retweeters", {
+    variables: {
+      tweetId,
+      count: opts.count || 20,
+      cursor: opts.cursor,
+      includePromotedContent: false,
+    },
+  });
+}
 
-      if (lastId) opts.replyTo = lastId;
+export async function highlight(tweetId) {
+  return await this.graphql("CreateHighlight", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
 
-      const tweet = await this.create(text, opts);
-      tweets.push(tweet);
-      lastId = tweet.id;
-    }
+export async function unhighlight(tweetId) {
+  return await this.graphql("DeleteHighlight", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
 
-    return tweets;
-  },
+export async function schedule(text, scheduledAt, opts = {}) {
+  return await this.graphql("CreateScheduledTweet", {
+    body: {
+      variables: {
+        post_tweet_request: {
+          status: text,
+          ...(opts.mediaIds ? { media_ids: opts.mediaIds } : {}),
+          ...(opts.replyTo ? { in_reply_to_status_id: opts.replyTo } : {}),
+          auto_populate_reply_metadata: true,
+        },
+        execute_at: Math.floor(new Date(scheduledAt).getTime() / 1000),
+      },
+    },
+  });
+}
 
-  async similar(tweetId) {
-    return await client.graphql("SimilarPosts", {
-      variables: { tweet_id: tweetId },
-    });
-  },
-});
+export async function deleteScheduled(scheduledTweetId) {
+  return await this.graphql("DeleteScheduledTweet", {
+    body: { variables: { scheduled_tweet_id: scheduledTweetId } },
+  });
+}
+
+export async function getScheduled() {
+  return await this.graphql("FetchScheduledTweets", {
+    variables: {},
+  });
+}
+
+export async function moderate(tweetId) {
+  return await this.graphql("ModerateTweet", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
+
+export async function unmoderate(tweetId) {
+  return await this.graphql("UnmoderateTweet", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
+
+export async function pinReply(tweetId) {
+  return await this.graphql("PinReply", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
+
+export async function unpinReply(tweetId) {
+  return await this.graphql("UnpinReply", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
+
+export async function setConversationControl(tweetId, mode) {
+  return await this.graphql("ConversationControlChange", {
+    body: { variables: { tweet_id: tweetId, mode } },
+  });
+}
+
+export async function removeConversationControl(tweetId) {
+  return await this.graphql("ConversationControlDelete", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
+
+export async function unmention(tweetId) {
+  return await this.graphql("UnmentionUserFromConversation", {
+    body: { variables: { tweet_id: tweetId } },
+  });
+}
+
+export async function createThread(items) {
+  if (!Array.isArray(items) || items.length < 2)
+    throw new Error("a thread must have at least 2 tweets");
+
+  const tweets = [];
+  let lastId = null;
+
+  for (const item of items) {
+    const opts = typeof item === "string" ? {} : { ...item };
+    const text = typeof item === "string" ? item : item.text;
+
+    if (lastId) opts.replyTo = lastId;
+
+    const tweet = await create.call(this, text, opts);
+    tweets.push(tweet);
+    lastId = tweet.id;
+  }
+
+  return tweets;
+}
+
+export async function similar(tweetId) {
+  return await this.graphql("SimilarPosts", {
+    variables: { tweet_id: tweetId },
+  });
+}

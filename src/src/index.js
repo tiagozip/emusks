@@ -1,19 +1,16 @@
 import { ClientTransaction, handleXMigration } from "x-client-transaction-id";
-import parseUser from "./parsers/user.js";
-import getCycleTLS from "./cycletls.js";
 import clients from "./clients.js";
+import getCycleTLS from "./cycletls.js";
+import flowLogin from "./flow.js";
 import graphql from "./graphql.js";
+import initHelpers from "./helpers/index.js";
+import parseUser from "./parsers/user.js";
 import v1_1 from "./v1.1.js";
 import v2 from "./v2.js";
-import flowLogin from "./flow.js";
-import initHelpers from "./helpers/index.js";
 
 export default class Emusks {
   auth = null;
   elevatedCookies = null;
-  graphql = graphql;
-  v1_1 = v1_1;
-  v2 = v2;
 
   async elevate(password) {
     if (!this.auth) throw new Error("must be logged in before calling elevate");
@@ -54,8 +51,10 @@ export default class Emusks {
     }
 
     if (p.type === "password") {
-      if (!p.username) throw new Error("username is required for password login");
-      if (!p.password) throw new Error("password is required for password login");
+      if (!p.username)
+        throw new Error("username is required for password login");
+      if (!p.password)
+        throw new Error("password is required for password login");
 
       const flowResult = await flowLogin({
         username: p.username,
@@ -128,8 +127,16 @@ export default class Emusks {
     }
     this.auth.client.headers.cookie = cookieParts.join("; ");
 
+    const document = await handleXMigration();
+    const transaction = new ClientTransaction(document);
+    await transaction.initialize();
+    this.auth.generateTransactionId =
+      transaction.generateTransactionId.bind(transaction);
+
     const responseText = await res.text();
-    const initialStateMatch = responseText.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s);
+    const initialStateMatch = responseText.match(
+      /window\.__INITIAL_STATE__\s*=\s*({.*?});/s,
+    );
 
     if (!initialStateMatch) {
       console.warn("[emusks] failed to extract initial state from response");
@@ -148,14 +155,11 @@ export default class Emusks {
     this.user = parseUser(initialStateUser);
     this.settings = initialState?.settings?.remote?.settings;
 
-    const document = await handleXMigration();
-    const transaction = new ClientTransaction(document);
-    await transaction.initialize();
-    this.auth.generateTransactionId = transaction.generateTransactionId.bind(transaction);
-
-    const helpers = initHelpers(this);
-    Object.assign(this, helpers);
-
     return this.user;
   }
 }
+
+Emusks.prototype.graphql = graphql;
+Emusks.prototype.v1_1 = v1_1;
+Emusks.prototype.v2 = v2;
+initHelpers(Emusks.prototype);
