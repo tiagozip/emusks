@@ -4,30 +4,24 @@ import parseTweet from "../parsers/tweet.js";
 async function createPollCard(instance, poll) {
   if (!poll.choices || poll.choices.length < 2)
     throw new Error("a poll must have at least 2 choices");
-  if (poll.choices.length > 4)
-    throw new Error("a poll must not have more than 4 choices");
+  if (poll.choices.length > 4) throw new Error("a poll must not have more than 4 choices");
 
   const hasImages = poll.choices.some((c) => typeof c === "object" && c.image);
   const allImages = poll.choices.every((c) => typeof c === "object" && c.image);
   if (hasImages && !allImages)
-    throw new Error(
-      "either all poll choices must have images, or none of them",
-    );
+    throw new Error("either all poll choices must have images, or none of them");
 
   const labels = poll.choices.map((c) => (typeof c === "object" ? c.label : c));
 
   for (const label of labels) {
     if (typeof label !== "string" || label.length === 0)
       throw new Error("each poll choice must have a non-empty label");
-    if (label.length > 25)
-      throw new Error(`poll choice "${label}" exceeds the 25-character limit`);
+    if (label.length > 25) throw new Error(`poll choice "${label}" exceeds the 25-character limit`);
   }
 
   const duration = poll.duration_minutes ?? 1440;
   if (duration < 5 || duration > 10080)
-    throw new Error(
-      "poll duration must be between 5 and 10 080 minutes (7 days)",
-    );
+    throw new Error("poll duration must be between 5 and 10 080 minutes (7 days)");
 
   const cycleTLS = await getCycleTLS();
 
@@ -40,8 +34,7 @@ async function createPollCard(instance, poll) {
     cardObj["twitter:card"] = "poll_choice_images";
     for (let i = 0; i < poll.choices.length; i++) {
       cardObj[`twitter:string:choice${i + 1}_label`] = labels[i];
-      cardObj[`twitter:image:choice${i + 1}_image:src:id`] =
-        `mis://${poll.choices[i].image}`;
+      cardObj[`twitter:image:choice${i + 1}_image:src:id`] = `mis://${poll.choices[i].image}`;
     }
   } else {
     cardObj["twitter:card"] = `poll${poll.choices.length}choice_text_only`;
@@ -65,9 +58,9 @@ async function createPollCard(instance, poll) {
         "x-twitter-auth-type": "OAuth2Session",
         "x-twitter-client-language": "en",
         priority: "u=1, i",
-        "sec-ch-ua": 'Not(A:Brand;v=8, Chromium;v=144',
+        "sec-ch-ua": "Not(A:Brand;v=8, Chromium;v=144",
         "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": 'macOS',
+        "sec-ch-ua-platform": "macOS",
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
@@ -99,9 +92,26 @@ export async function create(text, opts = {}) {
   let cardUri = opts.cardUri;
 
   if (opts.poll) {
-    if (cardUri)
-      throw new Error("a tweet can\u0027t have both a poll and a cardUri");
+    if (cardUri) throw new Error("a tweet can\u0027t have both a poll and a cardUri");
     cardUri = await createPollCard(this, opts.poll);
+  }
+
+  const mediaIds = opts.mediaIds ? [...opts.mediaIds] : [];
+
+  if (opts.gif) {
+    const gif = opts.gif;
+    const gifUrl = gif.original_image?.url || gif.url;
+    if (!gifUrl) throw new Error("gif must have a url or original_image.url");
+
+    const provider = gif.found_media_origin?.provider || gif.provider;
+    const gifId = gif.found_media_origin?.id || gif.id;
+    const altText = gif.alt_text || gif.altText;
+
+    const uploaded = await this.media.createFromUrl(gifUrl, {
+      origin: provider && gifId ? { provider, id: gifId } : undefined,
+      altText,
+    });
+    mediaIds.push(uploaded.media_id);
   }
 
   const res = await this.graphql("CreateTweet", {
@@ -111,21 +121,20 @@ export async function create(text, opts = {}) {
         dark_request: false,
         card_uri: cardUri || undefined,
         media: {
-          media_entities:
-            opts.mediaIds?.map((id) => ({
-              media_id: id,
-              tagged_users: [],
-            })) || [],
+          media_entities: mediaIds.map((id) => ({
+            media_id: id,
+            tagged_users: [],
+          })),
           possibly_sensitive: opts.sensitive || false,
         },
         semantic_annotation_ids: [],
         ...(opts.replyTo
           ? {
-            reply: {
-              in_reply_to_tweet_id: opts.replyTo,
-              exclude_reply_user_ids: [],
-            },
-          }
+              reply: {
+                in_reply_to_tweet_id: opts.replyTo,
+                exclude_reply_user_ids: [],
+              },
+            }
           : {}),
         ...(opts.quoteTweetId
           ? { attachment_url: `https://x.com/i/status/${opts.quoteTweetId}` }
@@ -159,11 +168,11 @@ export async function createNote(text, opts = {}) {
         richtext_options: { richtext_tags: opts.richtext_tags || [] },
         ...(opts.replyTo
           ? {
-            reply: {
-              in_reply_to_tweet_id: opts.replyTo,
-              exclude_reply_user_ids: [],
-            },
-          }
+              reply: {
+                in_reply_to_tweet_id: opts.replyTo,
+                exclude_reply_user_ids: [],
+              },
+            }
           : {}),
         ...opts.variables,
       },
@@ -248,9 +257,7 @@ export async function getMany(tweetIds) {
     },
   });
   const results = res?.data?.tweetResult || [];
-  return Array.isArray(results)
-    ? results.map((r) => (r?.result ? parseTweet(r.result) : r))
-    : res;
+  return Array.isArray(results) ? results.map((r) => (r?.result ? parseTweet(r.result) : r)) : res;
 }
 
 export async function detail(tweetId, opts = {}) {

@@ -23,8 +23,7 @@ const MIME_BY_EXT = {
 
 function detectMediaType(buf) {
   if (buf[0] === 0xff && buf[1] === 0xd8) return "image/jpeg";
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47)
-    return "image/png";
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
   if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return "image/gif";
   if (
     buf[0] === 0x52 &&
@@ -37,16 +36,9 @@ function detectMediaType(buf) {
     buf[11] === 0x50
   )
     return "image/webp";
-  if (
-    buf.length > 7 &&
-    buf[4] === 0x66 &&
-    buf[5] === 0x74 &&
-    buf[6] === 0x79 &&
-    buf[7] === 0x70
-  )
+  if (buf.length > 7 && buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70)
     return "video/mp4";
-  if (buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3)
-    return "video/webm";
+  if (buf[0] === 0x1a && buf[1] === 0x45 && buf[2] === 0xdf && buf[3] === 0xa3) return "video/webm";
   return null;
 }
 
@@ -59,31 +51,15 @@ function getMediaCategory(mediaType, uploadType) {
 
 function checkMediaSize(category, size) {
   const fmt = (x) => `${(x / 1e6).toFixed(2)} MB`;
-  if (
-    category.includes("image") &&
-    !category.includes("gif") &&
-    size > MAX_IMAGE_SIZE
-  )
-    throw new Error(
-      `cannot upload ${fmt(size)} image \u2014 max is ${fmt(MAX_IMAGE_SIZE)}`,
-    );
+  if (category.includes("image") && !category.includes("gif") && size > MAX_IMAGE_SIZE)
+    throw new Error(`cannot upload ${fmt(size)} image \u2014 max is ${fmt(MAX_IMAGE_SIZE)}`);
   if (category.includes("gif") && size > MAX_GIF_SIZE)
-    throw new Error(
-      `cannot upload ${fmt(size)} gif \u2014 max is ${fmt(MAX_GIF_SIZE)}`,
-    );
+    throw new Error(`cannot upload ${fmt(size)} gif \u2014 max is ${fmt(MAX_GIF_SIZE)}`);
   if (category.includes("video") && size > MAX_VIDEO_SIZE)
-    throw new Error(
-      `cannot upload ${fmt(size)} video \u2014 max is ${fmt(MAX_VIDEO_SIZE)}`,
-    );
+    throw new Error(`cannot upload ${fmt(size)} video \u2014 max is ${fmt(MAX_VIDEO_SIZE)}`);
 }
 
-async function makeUploadRequest(
-  instance,
-  method,
-  params,
-  body,
-  extraHeaders = {},
-) {
+async function makeUploadRequest(instance, method, params, body, extraHeaders = {}) {
   const cycleTLS = await getCycleTLS();
   const url = `${UPLOAD_URL}?${new URLSearchParams(params).toString()}`;
 
@@ -96,9 +72,9 @@ async function makeUploadRequest(
     "x-twitter-auth-type": "OAuth2Session",
     "x-twitter-client-language": "en",
     priority: "u=1, i",
-    "sec-ch-ua": 'Not(A:Brand;v=8, Chromium;v=144',
+    "sec-ch-ua": "Not(A:Brand;v=8, Chromium;v=144",
     "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": 'macOS',
+    "sec-ch-ua-platform": "macOS",
     "sec-fetch-dest": "empty",
     "sec-fetch-mode": "cors",
     "sec-fetch-site": "same-site",
@@ -138,10 +114,7 @@ export async function create(source, opts = {}) {
   } else if (typeof Blob !== "undefined" && source instanceof Blob) {
     buf = Buffer.from(await source.arrayBuffer());
     if (!mediaType) mediaType = source.type || undefined;
-  } else if (
-    source instanceof ArrayBuffer ||
-    source instanceof SharedArrayBuffer
-  ) {
+  } else if (source instanceof ArrayBuffer || source instanceof SharedArrayBuffer) {
     buf = Buffer.from(source);
   } else if (Buffer.isBuffer(source) || source instanceof Uint8Array) {
     buf = Buffer.from(source);
@@ -153,9 +126,7 @@ export async function create(source, opts = {}) {
 
   if (!mediaType) mediaType = detectMediaType(buf);
   if (!mediaType)
-    throw new Error(
-      "could not detect media type \u2014 pass opts.mediaType (e.g. 'image/png')",
-    );
+    throw new Error("could not detect media type \u2014 pass opts.mediaType (e.g. 'image/png')");
 
   const totalBytes = buf.length;
   const uploadType = opts.type === "dm" ? "dm" : "tweet";
@@ -177,10 +148,7 @@ export async function create(source, opts = {}) {
 
   let segmentIndex = 0;
   for (let offset = 0; offset < totalBytes; offset += CHUNK_SIZE) {
-    const chunk = buf.slice(
-      offset,
-      Math.min(offset + CHUNK_SIZE, totalBytes),
-    );
+    const chunk = buf.slice(offset, Math.min(offset + CHUNK_SIZE, totalBytes));
     const base64 = chunk.toString("base64");
 
     await makeUploadRequest(
@@ -205,23 +173,17 @@ export async function create(source, opts = {}) {
 
   const finalizeData = await finalizeRes.json();
   if (finalizeData?.error) {
-    throw new Error(
-      `upload FINALIZE failed: ${JSON.stringify(finalizeData)}`,
-    );
+    throw new Error(`upload FINALIZE failed: ${JSON.stringify(finalizeData)}`);
   }
 
   let processingInfo = finalizeData?.processing_info;
   while (processingInfo) {
     if (processingInfo.error) {
-      throw new Error(
-        `media processing error: ${JSON.stringify(processingInfo.error)}`,
-      );
+      throw new Error(`media processing error: ${JSON.stringify(processingInfo.error)}`);
     }
     if (processingInfo.state === "succeeded") break;
     if (processingInfo.state === "failed") {
-      throw new Error(
-        `media processing failed: ${JSON.stringify(processingInfo)}`,
-      );
+      throw new Error(`media processing failed: ${JSON.stringify(processingInfo)}`);
     }
 
     const wait = (processingInfo.check_after_secs || 2) * 1000;
@@ -245,6 +207,61 @@ export async function create(source, opts = {}) {
   }
 
   return { media_id: mediaId, ...finalizeData };
+}
+
+export async function createFromUrl(url, opts = {}) {
+  if (!this.auth) throw new Error("you must be logged in to upload media");
+
+  const mediaType = opts.mediaType || "image/gif";
+  const uploadType = opts.type === "dm" ? "dm" : "tweet";
+  const category = opts.mediaCategory || getMediaCategory(mediaType, uploadType);
+
+  const initRes = await makeUploadRequest(this, "post", {
+    command: "INIT",
+    source_url: url,
+    media_type: mediaType,
+    media_category: category,
+  });
+
+  const initData = await initRes.json();
+  if (!initData?.media_id_string) {
+    throw new Error(`upload INIT failed: ${JSON.stringify(initData)}`);
+  }
+  const mediaId = initData.media_id_string;
+
+  let processingInfo = initData?.processing_info;
+  while (processingInfo) {
+    if (processingInfo.error) {
+      throw new Error(`media processing error: ${JSON.stringify(processingInfo.error)}`);
+    }
+    if (processingInfo.state === "succeeded") break;
+    if (processingInfo.state === "failed") {
+      throw new Error(`media processing failed: ${JSON.stringify(processingInfo)}`);
+    }
+
+    const wait = (processingInfo.check_after_secs || 2) * 1000;
+    await new Promise((r) => setTimeout(r, wait));
+
+    const statusRes = await makeUploadRequest(this, "get", {
+      command: "STATUS",
+      media_id: mediaId,
+    });
+    const statusData = await statusRes.json();
+    processingInfo = statusData?.processing_info;
+  }
+
+  const metadataBody = { media_id: mediaId };
+  const altText = opts.altText || opts.alt_text;
+  if (altText) metadataBody.alt_text = { text: altText };
+  if (opts.origin) metadataBody.found_media_origin = opts.origin;
+
+  if (altText || opts.origin) {
+    await this.v1_1("media/metadata/create", {
+      body: JSON.stringify(metadataBody),
+    });
+  }
+
+  return { media_id: mediaId, ...initData };
 }
 
 export async function createMetadata(mediaId, altText, opts = {}) {

@@ -6,17 +6,18 @@ Create, delete, like, retweet, pin, schedule, and manage tweets.
 
 Create a new tweet. Uses the GraphQL `CreateTweet` mutation.
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `text` | `string` | The tweet text |
-| `opts.mediaIds` | `string[]` | Array of [media IDs](./media) to attach |
-| `opts.replyTo` | `string` | Tweet ID to reply to |
-| `opts.quoteTweetId` | `string` | Tweet ID to quote |
-| `opts.sensitive` | `boolean` | Mark media as possibly sensitive |
-| `opts.conversationControl` | `string` | Who can reply: `"ByInvitation"` or `"Community"` |
-| `opts.poll` | `object` | Attach a [poll](#polls) |
-| `opts.cardUri` | `string` | A Twitter Card URI to attach (cannot be combined with `poll`) |
-| `opts.variables` | `object` | Additional GraphQL variables to merge |
+| Option                     | Type       | Description                                                   |
+| -------------------------- | ---------- | ------------------------------------------------------------- |
+| `text`                     | `string`   | The tweet text                                                |
+| `opts.mediaIds`            | `string[]` | Array of [media IDs](./media) to attach                       |
+| `opts.gif`                 | `object`   | Attach a [GIF](#gifs)                                         |
+| `opts.replyTo`             | `string`   | Tweet ID to reply to                                          |
+| `opts.quoteTweetId`        | `string`   | Tweet ID to quote                                             |
+| `opts.sensitive`           | `boolean`  | Mark media as possibly sensitive                              |
+| `opts.conversationControl` | `string`   | Who can reply: `"ByInvitation"` or `"Community"`              |
+| `opts.poll`                | `object`   | Attach a [poll](#polls)                                       |
+| `opts.cardUri`             | `string`   | A Twitter Card URI to attach (cannot be combined with `poll`) |
+| `opts.variables`           | `object`   | Additional GraphQL variables to merge                         |
 
 ```js
 const tweet = await client.tweets.create("Hello world!");
@@ -57,6 +58,10 @@ const { media_id } = await client.media.create("./photo.jpg", {
 const mediaTweet = await client.tweets.create("Golden hour", {
   mediaIds: [media_id],
 });
+
+// With a GIF from search
+const { items } = await client.search.gifs("celebration");
+const gifTweet = await client.tweets.create("🎉", { gif: items[0] });
 ```
 
 **Returns:** Parsed tweet object.
@@ -67,10 +72,10 @@ Create tweets with polls by passing a `poll` option to `tweets.create()`.
 
 #### `opts.poll`
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `choices` | `string[] \| object[]` | **Yes** | 2–4 choices — strings for text polls, objects for media polls |
-| `duration_minutes` | `number` | No | How long the poll stays open (default: **1440** = 24 h, max 7 days) |
+| Field              | Type                   | Required | Description                                                         |
+| ------------------ | ---------------------- | -------- | ------------------------------------------------------------------- |
+| `choices`          | `string[] \| object[]` | **Yes**  | 2–4 choices — strings for text polls, objects for media polls       |
+| `duration_minutes` | `number`               | No       | How long the poll stays open (default: **1440** = 24 h, max 7 days) |
 
 Each choice can be:
 
@@ -157,8 +162,8 @@ const note = await client.tweets.createNote("This is a very long note...");
 
 Post a thread (multiple tweets chained as replies). Each item after the first automatically replies to the previous tweet.
 
-| Param | Type | Description |
-| --- | --- | --- |
+| Param   | Type                   | Description                                                       |
+| ------- | ---------------------- | ----------------------------------------------------------------- |
 | `items` | `(string \| object)[]` | Array of 2+ tweets — strings for text-only, objects for full opts |
 
 Each object item accepts the same options as `tweets.create()` (`mediaIds`, `poll`, `sensitive`, etc.) plus a `text` field.

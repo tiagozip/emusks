@@ -6,12 +6,12 @@ Upload images, GIFs, and videos, then attach them to tweets.
 
 Upload media to Twitter. Returns a `media_id` you can pass to [`tweets.create()`](./tweets#tweets-create-text-opts).
 
-| Param | Type | Description |
-| --- | --- | --- |
-| `source` | `string \| Buffer \| Uint8Array \| ArrayBuffer \| Blob` | A **file path**, `Buffer`, typed array, or `Blob` containing the media |
-| `opts.alt_text` | `string` | Alt text for accessibility (applied automatically after upload) |
-| `opts.mediaType` | `string` | Explicit MIME type (e.g. `"image/png"`). Auto-detected when omitted |
-| `opts.type` | `"tweet" \| "dm"` | Upload context — defaults to `"tweet"`. Use `"dm"` for direct messages |
+| Param            | Type                                                    | Description                                                            |
+| ---------------- | ------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `source`         | `string \| Buffer \| Uint8Array \| ArrayBuffer \| Blob` | A **file path**, `Buffer`, typed array, or `Blob` containing the media |
+| `opts.alt_text`  | `string`                                                | Alt text for accessibility (applied automatically after upload)        |
+| `opts.mediaType` | `string`                                                | Explicit MIME type (e.g. `"image/png"`). Auto-detected when omitted    |
+| `opts.type`      | `"tweet" \| "dm"`                                       | Upload context — defaults to `"tweet"`. Use `"dm"` for direct messages |
 
 **Returns:** `{ media_id, ... }` — use `media_id` with `tweets.create()`.
 
@@ -83,6 +83,60 @@ await client.tweets.create("Photo dump 🧵", {
 Always add `alt_text`! It makes your media accessible to users who rely on screen readers — and it only takes one extra option.
 :::
 
+## `media.createFromUrl(url, opts?)`
+
+Upload a GIF (or other media) from a URL. Twitter fetches the file directly from the URL — no chunked upload needed. Returns a `media_id` you can pass to [`tweets.create()`](./tweets#tweets-create-text-opts).
+
+This is used internally by [`tweets.create({ gif })`](./tweets#gifs) but can also be called directly for more control.
+
+| Param                | Type              | Description                                                                                  |
+| -------------------- | ----------------- | -------------------------------------------------------------------------------------------- |
+| `url`                | `string`          | The URL of the media to upload (e.g. a Giphy/Tenor GIF URL)                                  |
+| `opts.mediaType`     | `string`          | MIME type (default `"image/gif"`)                                                            |
+| `opts.mediaCategory` | `string`          | Upload category (default auto-detected, e.g. `"tweet_gif"`)                                  |
+| `opts.type`          | `"tweet" \| "dm"` | Upload context — defaults to `"tweet"`. Use `"dm"` for direct messages                       |
+| `opts.altText`       | `string`          | Alt text for accessibility                                                                   |
+| `opts.origin`        | `object`          | Provider origin info: `{ provider, id }` (e.g. `{ provider: "giphy", id: "xSM46ernAUN3y" }`) |
+
+**Returns:** `{ media_id, ... }` — use `media_id` with `tweets.create()`.
+
+### Examples
+
+```js
+// Upload a GIF from a Giphy URL
+const result = await client.media.createFromUrl(
+  "https://media4.giphy.com/media/xSM46ernAUN3y/giphy.gif",
+  {
+    altText: "Happy If You Say So GIF",
+    origin: { provider: "giphy", id: "xSM46ernAUN3y" },
+  },
+);
+await client.tweets.create("Check this out!", {
+  mediaIds: [result.media_id],
+});
+
+// Upload a Tenor GIF
+const tenor = await client.media.createFromUrl(
+  "https://media.tenor.com/zlRxesGf5u4AAAAC/charlie-kirk-charlie.gif",
+  {
+    altText: "Charlie Kirk Aura GIF",
+    origin: { provider: "riffsy", id: "14867633041905280750" },
+  },
+);
+
+// Use with a GIF search result
+const { items } = await client.search.gifs("celebration");
+const uploaded = await client.media.createFromUrl(items[0].original_image.url, {
+  altText: items[0].alt_text,
+  origin: items[0].found_media_origin,
+});
+await client.tweets.create("🎉", { mediaIds: [uploaded.media_id] });
+```
+
+::: tip
+We recommend using the [`gif` option on `tweets.create()`](./tweets#gifs) instead as it handles the upload automatically.
+:::
+
 ## `media.createMetadata(mediaId, altText, opts?)`
 
 Set alt text and metadata for an already-uploaded media item. Uses the v1.1 `media/metadata/create` endpoint.
@@ -98,19 +152,16 @@ Set alt text and metadata for an already-uploaded media item. Uses the v1.1 `med
 | `opts`    | `object` | Additional metadata fields to merge |
 
 ```js
-await client.media.createMetadata(
-  "1234567890",
-  "A photo of a sunset over the ocean",
-);
+await client.media.createMetadata("1234567890", "A photo of a sunset over the ocean");
 ```
 
 ## `media.createSubtitles(mediaId, subtitles)`
 
 Attach subtitles / captions to a video. Uses the v1.1 `media/subtitles/create` endpoint.
 
-| Param | Type | Description |
-| --- | --- | --- |
-| `mediaId` | `string` | The video media ID |
+| Param       | Type              | Description                                    |
+| ----------- | ----------------- | ---------------------------------------------- |
+| `mediaId`   | `string`          | The video media ID                             |
 | `subtitles` | `object \| array` | A subtitle object or array of subtitle objects |
 
 Each subtitle object:
