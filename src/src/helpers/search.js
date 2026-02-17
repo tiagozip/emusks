@@ -114,6 +114,21 @@ export async function communities(query, opts = {}) {
   return parseTimeline(raw);
 }
 
+export async function gifs(query, params = {}) {
+  const res = await this.v1_1("foundmedia/search", {
+    params: {
+      q: query,
+      ...(params.cursor ? { cursor: params.cursor } : {}),
+      ...params,
+    },
+  });
+  const json = await res.json();
+  return {
+    items: json.data?.items || [],
+    cursor: json.cursor?.next || null,
+  };
+}
+
 export async function communitiesLatest(query, opts = {}) {
   const raw = await this.graphql("GlobalCommunitiesLatestPostSearchTimeline", {
     variables: {

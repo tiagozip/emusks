@@ -1,6 +1,6 @@
 {
   "name": "emusks",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "description": "Reverse-engineered Twitter API client. Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck",
   "keywords": [
     "client",

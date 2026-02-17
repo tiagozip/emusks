@@ -6,14 +6,14 @@ Search tweets, users, media, and more across Twitter/X. Most of these support [S
 
 Search for tweets (Top results). Uses the GraphQL `SearchTimeline` query with `product: "Top"`.
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `query` | `string` | Search query (supports Twitter search operators) |
-| `opts.count` | `number` | Number of results (default 20) |
-| `opts.cursor` | `string` | Pagination cursor |
-| `opts.querySource` | `string` | Query source (default `"typed_query"`) |
-| `opts.product` | `string` | Override the product type (default `"Top"`) |
-| `opts.variables` | `object` | Additional GraphQL variables |
+| Option             | Type     | Description                                      |
+| ------------------ | -------- | ------------------------------------------------ |
+| `query`            | `string` | Search query (supports Twitter search operators) |
+| `opts.count`       | `number` | Number of results (default 20)                   |
+| `opts.cursor`      | `string` | Pagination cursor                                |
+| `opts.querySource` | `string` | Query source (default `"typed_query"`)           |
+| `opts.product`     | `string` | Override the product type (default `"Top"`)      |
+| `opts.variables`   | `object` | Additional GraphQL variables                     |
 
 ```js
 const { tweets, nextCursor } = await client.search.tweets("javascript");
@@ -93,10 +93,10 @@ const { tweets } = await client.search.lists("tech news");
 
 Get typeahead/autocomplete suggestions. Uses the v1.1 `search/typeahead` endpoint. Returns events, users, topics, and lists matching the query.
 
-| Param | Type | Description |
-| --- | --- | --- |
-| `query` | `string` | Search query |
-| `params.src` | `string` | Source context (default `"search_box"`) |
+| Param                | Type     | Description                                             |
+| -------------------- | -------- | ------------------------------------------------------- |
+| `query`              | `string` | Search query                                            |
+| `params.src`         | `string` | Source context (default `"search_box"`)                 |
 | `params.result_type` | `string` | Types to return (default `"events,users,topics,lists"`) |
 
 ```js
@@ -135,6 +135,45 @@ Search for the latest posts within communities globally. Uses the GraphQL `Globa
 const { tweets } = await client.search.communitiesLatest("open source");
 ```
 
+## `search.gifs(query, params?)`
+
+Search for GIFs via the v1.1 `foundmedia/search` endpoint. Returns GIF items with thumbnail, preview, and original image URLs.
+
+| Param           | Type     | Description       |
+| --------------- | -------- | ----------------- |
+| `query`         | `string` | Search query      |
+| `params.cursor` | `string` | Pagination cursor |
+
+**Response:**
+
+| Field    | Type      | Description                         |
+| -------- | --------- | ----------------------------------- |
+| `items`  | `array`   | Array of GIF items                  |
+| `cursor` | `string?` | Cursor for the next page, or `null` |
+
+Each item in `items` has:
+
+| Field              | Type     | Description                                                                   |
+| ------------------ | -------- | ----------------------------------------------------------------------------- |
+| `id`               | `string` | Unique item ID (e.g. `"giphy_04DMYESomjb6BCBNB8"`)                            |
+| `item_type`        | `string` | Always `"gif"`                                                                |
+| `provider`         | `object` | Provider info (`name`, `display_name` — e.g. `"giphy"`, `"riffsy"` for Tenor) |
+| `url`              | `string` | Canonical URL of the GIF                                                      |
+| `alt_text`         | `string` | Alt text / description                                                        |
+| `original_image`   | `object` | Full-size image (`url`, `width`, `height`, `byte_count`, `still_image_url`)   |
+| `preview_image`    | `object` | Preview image (same shape as `original_image`)                                |
+| `thumbnail_images` | `array`  | Array of thumbnail images (same shape as `original_image`)                    |
+
+```js
+const { items, cursor } = await client.search.gifs("funny cat");
+console.log(items[0].original_image.url); // GIF URL
+console.log(items[0].alt_text); // "Funny Cat GIF"
+console.log(items[0].provider.name); // "giphy" or "riffsy" (Tenor)
+
+// Paginate
+const page2 = await client.search.gifs("funny cat", { cursor });
+```
+
 ## `search.adaptive(query, params?)`
 
 Perform an "adaptive search" via the v2 API. Uses the v2 `search/adaptive` endpoint. Returns raw search results with full tweet and user objects.
@@ -145,12 +184,12 @@ This hasn't been fully tested yet and may have some quirks. It also doesn't supp
 **Using the [normal search methods](#search-tweets-query-opts) over this one is recommended for most use cases** unless you have a specific reason for needing to use v2 search or want to experiment with it.
 :::
 
-| Param | Type | Description |
-| --- | --- | --- |
-| `query` | `string` | Search query |
-| `params.count` | `number` | Number of results (default 20) |
-| `params.query_source` | `string` | Query source (default `"typed_query"`) |
-| `params.pc` | `number` | Promoted content flag (default 1) |
+| Param                         | Type     | Description                             |
+| ----------------------------- | -------- | --------------------------------------- |
+| `query`                       | `string` | Search query                            |
+| `params.count`                | `number` | Number of results (default 20)          |
+| `params.query_source`         | `string` | Query source (default `"typed_query"`)  |
+| `params.pc`                   | `number` | Promoted content flag (default 1)       |
 | `params.spelling_corrections` | `number` | Enable spelling corrections (default 1) |
 
 ```js
@@ -171,12 +210,15 @@ const { users: devs } = await client.search.users("javascript developer");
 // Get autocomplete suggestions
 const suggestions = await client.search.typeahead("type");
 
+// Search for GIFs
+const { items: gifs, cursor: gifCursor } = await client.search.gifs("celebration");
+console.log(gifs[0].original_image.url);
+
 // Search with the v2 adaptive endpoint
 const adaptive = await client.search.adaptive("web development", { count: 30 });
 
 // Search within communities
-const { tweets: communityResults } =
-  await client.search.communities("open source");
+const { tweets: communityResults } = await client.search.communities("open source");
 
 // Advanced search with operators
 const { tweets: advanced } = await client.search.tweets(
