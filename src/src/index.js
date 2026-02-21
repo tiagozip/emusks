@@ -2,7 +2,7 @@ import { ClientTransaction, handleXMigration } from "x-client-transaction-id";
 import clients from "./clients.js";
 import getCycleTLS from "./cycletls.js";
 import flowLogin from "./flow.js";
-import graphql from "./graphql.js";
+import graphql, { GRAPHQL_ENDPOINTS } from "./graphql.js";
 import initHelpers from "./helpers/index.js";
 import parseUser from "./parsers/user.js";
 import v1_1 from "./v1.1.js";
@@ -11,6 +11,8 @@ import v2 from "./v2.js";
 export default class Emusks {
   auth = null;
   elevatedCookies = null;
+  graphqlEndpoint = "web";
+  transactionIds = undefined;
 
   async elevate(password) {
     if (!this.auth) throw new Error("must be logged in before calling elevate");
@@ -76,6 +78,19 @@ export default class Emusks {
     if (!p.client) throw new Error("invalid client!");
     if (p.proxy) this.proxy = p.proxy;
 
+    if (p.endpoint) {
+      if (!GRAPHQL_ENDPOINTS[p.endpoint]) {
+        throw new Error(
+          `unknown graphql endpoint "${p.endpoint}", expected: ${Object.keys(GRAPHQL_ENDPOINTS).join(", ")}`,
+        );
+      }
+      this.graphqlEndpoint = p.endpoint;
+    }
+
+    if (p.transactionIds !== undefined) {
+      this.transactionIds = p.transactionIds;
+    }
+
     if (!p.client.bearer) {
       throw new Error("client is missing bearer token!");
     }
@@ -139,10 +154,17 @@ export default class Emusks {
     }
     this.auth.client.headers.cookie = cookieParts.join("; ");
 
-    const document = await handleXMigration();
-    const transaction = new ClientTransaction(document);
-    await transaction.initialize();
-    this.auth.generateTransactionId = transaction.generateTransactionId.bind(transaction);
+    const needsTransactionIds =
+      this.transactionIds !== undefined
+        ? this.transactionIds
+        : this.graphqlEndpoint === "web" || this.graphqlEndpoint === "web_twitter";
+
+    if (needsTransactionIds) {
+      const document = await handleXMigration();
+      const transaction = new ClientTransaction(document);
+      await transaction.initialize();
+      this.auth.generateTransactionId = transaction.generateTransactionId.bind(transaction);
+    }
 
     const responseText = await res.text();
     const initialStateMatch = responseText.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s);

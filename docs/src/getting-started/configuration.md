@@ -1,6 +1,6 @@
 # Configuration
 
-emusks lets you customize how it connects to Twitter/X. You can choose which client to emulate, route traffic through a proxy, and access the raw API layers directly.
+emusks lets you customize how it connects to Twitter/X. You can choose which client to emulate, which GraphQL endpoint to target, route traffic through a proxy, and access the raw API layers directly.
 
 ## Client selection
 
@@ -25,7 +25,7 @@ The current built-in clients are `android`, `iphone`, `ipad`, `mac`, `old`, `web
 ::: tip Custom clients
 By default, emusks uses the "web" client, which is the most common and least likely to raise suspicion. However, if you want to emulate a different client or use a custom bearer token, you can do so with the `client` option.
 
-Custom clients may be useful for avoiding rate-limits and making sure your app to be stable and long-running. If you need a bearer, please [DM](https://x.com/0xtiago_) or [email](mailto:fancy-chewy-oblong@duck.com) me. To use a custom client, pass an object instead of a string:
+**Custom clients are recommended for avoiding rate-limits.** If you need a bearer, please [DM](https://x.com/0xtiago_) or [email](mailto:fancy-chewy-oblong@duck.com) me. To use a custom client, pass an object instead of a string:
 
 ```js
 {
@@ -39,6 +39,60 @@ Custom clients may be useful for avoiding rate-limits and making sure your app t
 },
 ```
 
+:::
+
+## GraphQL endpoint
+
+Twitter/X exposes the same GraphQL API on multiple endpoints. emusks lets you pick which one to use:
+
+| Name        | Base URL                                                | Default transaction IDs |
+| ----------- | ------------------------------------------------------- | ----------------------- |
+| `web`       | `https://x.com/i/api/graphql/<queryId>/<queryName>`     | **on**                  |
+| `main`      | `https://api.x.com/graphql/<queryId>/<queryName>`       | off                     |
+| `tweetdeck` | `https://pro.x.com/i/api/graphql/<queryId>/<queryName>` | off                     |
+| `web_twitter`       | `https://twitter.com/i/api/graphql/<queryId>/<queryName>`     | **on**                  |
+| `main_twitter`      | `https://api.twitter.com/graphql/<queryId>/<queryName>`       | off                     |
+| `tweetdeck_twitter` | `https://pro.twitter.com/i/api/graphql/<queryId>/<queryName>` | off                     |
+
+The default endpoint is `web`. Set it with the `endpoint` option at login:
+
+```js
+const client = new Emusks();
+await client.login({
+  auth_token: "your_auth_token_here",
+  endpoint: "main", // "web" | "main" | "tweetdeck" | "web_twitter" | "main_twitter" | "tweetdeck_twitter"
+});
+```
+
+You can also change it after login by setting the property directly:
+
+```js
+client.graphqlEndpoint = "tweetdeck";
+```
+
+### Transaction IDs
+
+The `web` endpoint expects an `x-client-transaction-id` header on every GraphQL request. emusks generates these automatically using the [`x-client-transaction-id`](https://www.npmjs.com/package/x-client-transaction-id) package.
+
+The `main` and `tweetdeck` endpoints don't require transaction IDs, so they are **off** by default for those endpoints. You can override this with the `transactionIds` option:
+
+```js
+const client = new Emusks();
+await client.login({
+  auth_token: "your_auth_token_here",
+  endpoint: "main",
+  transactionIds: true, // force transaction IDs on for any endpoint
+});
+```
+
+Or toggle it after login:
+
+```js
+client.transactionIds = false; // disable even on web
+```
+
+::: tip When to change endpoints
+Different endpoints can behave differently under rate-limiting. If you're hitting limits on `web`, switching to `main` may help — and vice versa. The `tweetdeck` endpoint mirrors the TweetDeck (X Pro) web app.
 :::
 
 ## Proxy support

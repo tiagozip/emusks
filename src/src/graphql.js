@@ -1,5 +1,41 @@
+import { ClientTransaction, handleXMigration } from "x-client-transaction-id";
 import getCycleTLS from "./cycletls.js";
 import graphqlApi from "./static/graphql.js";
+
+const GRAPHQL_ENDPOINTS = {
+  main: {
+    base: "https://api.x.com/graphql",
+    referrer: "https://x.com/",
+    secFetchSite: "same-site",
+  },
+  main_twitter: {
+    base: "https://api.twitter.com/graphql",
+    referrer: "https://twitter.com/",
+    secFetchSite: "same-site",
+  },
+  web: {
+    base: "https://x.com/i/api/graphql",
+    referrer: "https://x.com/",
+    secFetchSite: "same-origin",
+  },
+  web_twitter: {
+    base: "https://twitter.com/i/api/graphql",
+    referrer: "https://twitter.com/",
+    secFetchSite: "same-origin",
+  },
+  tweetdeck: {
+    base: "https://pro.x.com/i/api/graphql",
+    referrer: "https://pro.x.com/",
+    secFetchSite: "same-origin",
+  },
+  tweetdeck_twitter: {
+    base: "https://pro.twitter.com/i/api/graphql",
+    referrer: "https://pro.twitter.com/",
+    secFetchSite: "same-origin",
+  },
+};
+
+export { GRAPHQL_ENDPOINTS };
 
 export default async function graphql(queryName, { variables, fieldToggles, body, headers } = {}) {
   const entry = graphqlApi[queryName];
@@ -7,10 +43,18 @@ export default async function graphql(queryName, { variables, fieldToggles, body
     throw new Error(`graphql query ${queryName} not found`);
   }
 
-  const [method, baseUrl, features, queryId] = entry;
+  const [method, , features, queryId] = entry;
   const isPost = method.toLowerCase() === "post";
 
-  let finalUrl = baseUrl;
+  const endpointName = this.graphqlEndpoint || "web";
+  const endpoint = GRAPHQL_ENDPOINTS[endpointName];
+  if (!endpoint) {
+    throw new Error(
+      `unknown graphql endpoint "${endpointName}", expected: ${Object.keys(GRAPHQL_ENDPOINTS).join(", ")}`,
+    );
+  }
+
+  let finalUrl = `${endpoint.base}/${queryId}/${queryName}`;
   let requestBody;
 
   if (isPost) {
@@ -41,6 +85,9 @@ export default async function graphql(queryName, { variables, fieldToggles, body
   const url = new URL(finalUrl);
   const pathname = url.pathname;
 
+  const useTransactionIds =
+    this.transactionIds !== undefined ? this.transactionIds : endpointName === "web";
+
   const requestHeaders = {
     accept: "*/*",
     "accept-language": "en-US,en;q=0.9",
@@ -50,22 +97,31 @@ export default async function graphql(queryName, { variables, fieldToggles, body
     "x-twitter-active-user": "yes",
     "x-twitter-auth-type": "OAuth2Session",
     "x-twitter-client-language": "en",
-    "x-client-transaction-id": await this.auth.generateTransactionId(
-      method.toUpperCase(),
-      pathname,
-    ),
     priority: "u=1, i",
     "sec-ch-ua": '"Not(A:Brand";v="8", "Chromium";v="144"',
     "sec-ch-ua-mobile": "?0",
     "sec-ch-ua-platform": '"macOS"',
     "sec-fetch-dest": "empty",
     "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
+    "sec-fetch-site": endpoint.secFetchSite,
     "sec-gpc": "1",
     cookie:
       this.auth.client.headers.cookie + (this.elevatedCookies ? `; ${this.elevatedCookies}` : ""),
     ...headers,
   };
+
+  if (useTransactionIds) {
+    if (!this.auth.generateTransactionId) {
+      const document = await handleXMigration();
+      const transaction = new ClientTransaction(document);
+      await transaction.initialize();
+      this.auth.generateTransactionId = transaction.generateTransactionId.bind(transaction);
+    }
+    requestHeaders["x-client-transaction-id"] = await this.auth.generateTransactionId(
+      method.toUpperCase(),
+      pathname,
+    );
+  }
 
   const cycleTLS = await getCycleTLS();
   const res = await (
@@ -78,7 +134,7 @@ export default async function graphql(queryName, { variables, fieldToggles, body
         ja4r: this.auth.client.fingerprints.ja4r,
         body: isPost ? JSON.stringify(requestBody) : undefined,
         proxy: this.proxy || undefined,
-        referrer: "https://x.com/",
+        referrer: endpoint.referrer,
       },
       method,
     )
