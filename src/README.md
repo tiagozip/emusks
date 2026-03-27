@@ -3,4 +3,6 @@
 
 Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck
 
-[Learn more →](https://emusks.tiago.zip)
+officially dmca'd by twitter™ 🏆  •  includes a few leaked ads bearers
+
+[Learn more →](https://emusks.tiago.zip) [GitHub](https://github.com/tiagozip/emusks)
