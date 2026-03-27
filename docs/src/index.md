@@ -17,7 +17,7 @@ hero:
 features:
   - icon: 🎭
     title: emulate any client
-    details: choose which Twitter client to impersonate or pick an included leaked bearer. each with correct HTTP fingerprints.
+    details: choose which Twitter client to impersonate or pick included leaked bearers. each with correct HTTP fingerprints.
   - icon: ⚡
     title: full modern API coverage
     details: access almost every feature on the platform - tweets, DMs, communities, spaces, bookmarks, lists, and more through a clean interface.
