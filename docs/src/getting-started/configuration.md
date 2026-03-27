@@ -20,12 +20,12 @@ Please note that the availability of clients constantly changes, and some may ge
 
 Changing the client usually doesn't require getting a new auth token, but you may need to change it if you sign out or get CAPTCHA'd.
 
-The current built-in clients are `android`, `iphone`, `ipad`, `mac`, `old`, `web`, and `tweetdeck`.
+The current built-in clients are `android`, `iphone`, `ipad`, `mac`, `old`, `web`, `tweetdeck`, along with a few leaked ones: `advertisers`, `ads_manager_next`, `advertiser_interface`, `corporate_cms`, `ads_broken`, `audience_manager_internal`, and `tweets_manager`.
 
 ::: tip Custom clients
 By default, emusks uses the "web" client, which is the most common and least likely to raise suspicion. However, if you want to emulate a different client or use a custom bearer token, you can do so with the `client` option.
 
-**Custom clients are recommended for avoiding rate-limits.** If you need a bearer, please [DM](https://x.com/0xtiago_) or [email](mailto:fancy-chewy-oblong@duck.com) me. To use a custom client, pass an object instead of a string:
+To use a custom client, pass an object instead of a string:
 
 ```js
 {
