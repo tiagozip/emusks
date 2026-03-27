@@ -1,7 +1,9 @@
 <img src="docs/src/public/icon.svg" width="120">
 <h1>emusks: Reverse-engineered Twitter API client</h1>
 
-Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck
+Log in and interact with the unofficial X API using any client identity — web, Android, iOS, or TweetDeck. 
+
+officially dmca'd by twitter™ 🏆
 
 [Get started →](https://emusks.tiago.zip)
   

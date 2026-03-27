@@ -16,23 +16,23 @@ hero:
 
 features:
   - icon: 🎭
-    title: Emulate any client
-    details: Choose which Twitter client to impersonate — Web, Android, iPhone, TweetDeck, or more — each with correct bearer tokens and HTTP fingerprints.
+    title: emulate any client
+    details: choose which Twitter client to impersonate - Web, Android, iPhone, TweetDeck, or more, each with correct bearer tokens and HTTP fingerprints.
   - icon: ⚡
-    title: Full API coverage
-    details: Access almost every feature on the platform — tweets, DMs, communities, spaces, bookmarks, lists, and more — through a clean JavaScript interface.
+    title: full modern API coverage
+    details: access almost every feature on the platform - tweets, DMs, communities, spaces, bookmarks, lists, and more through a clean interface.
+  - icon: 🏆
+    title: officially DMCA'd by twitter™
+    details: emusks is, as far as i know, the ONLY open-source twitter api implementation that's been DMCA'd for bypassing their checks. thanks for the support i guess!
   - icon: 🔐
-    title: Login with token or password
-    details: Log in with an auth token or username/password, with built-in support for 2FA, email verification, and elevated access.
-  - icon: 🌐
-    title: Proxy support
-    details: Route all traffic through HTTP or SOCKS5 proxies for IP rotation, rate limit management, or restricted network access.
+    title: login with token or password
+    details: log in with an auth token or username/password, with built-in support for 2FA, email verification, and elevated access.
   - icon: 🧩
-    title: Execute raw queries
-    details: Drop down to raw GraphQL, v1.1, or v2 API calls for undocumented endpoints or full control over requests and responses.
+    title: execute raw queries
+    details: drop down to raw GraphQL, v1.1, or v2 API calls for undocumented endpoints or full control over requests and responses.
   - icon: 📦
-    title: Zero config
-    details: Ships with ESM support, and sensible defaults. Install, import, and start building in seconds.
+    title: zero config
+    details: ships with ESM support, and sensible defaults. Install, import, and start building in seconds.
 ---
 
 <style>
